@@ -1,0 +1,79 @@
+Module Models
+{
+    Entity DisabilityType
+    {
+        Deactivatable; 
+        History { AllProperties; }
+
+        ShortString Type { Required; Unique; }
+    }   
+
+    ComplexStructure DisabilityTypeComplex Models.DisabilityType
+    {
+        Detail Models.DisabilitySubtype Subtypes;
+
+        CreateGet;
+        CreateSave
+        {
+            BeforeSave 'DeactivateSubtypesIfDeactivatedType'
+            '
+                if(root.Active.Value == false && root.Subtypes.Any(x => x.Active.HasValue && x.Active.Value)){
+                    var itemsToUpdate = root.Subtypes.ToList();
+					itemsToUpdate.ForEach(s => s.Active = false);
+                    root.Subtypes = itemsToUpdate;
+                }
+            ';
+        }
+    }
+
+    Entity DisabilitySubtype
+    {
+        Deactivatable; 
+        History { AllProperties; }
+
+        Reference DisabilityType { Detail; }
+        LongString Subtype { Required; }
+        Reference Parent Models.DisabilitySubtype;
+    }
+
+    ComplexStructure DisabilityTypeComplex Models.DisabilityType{
+        Detail Models.DisabilitySubtype Subtypes;
+    }
+
+    SqlQueryable DisabilityTypeSubtypeTreeData
+    "
+       SELECT 
+	        ID,
+	        ParentID = null,
+	        Naziv = Type,
+	        Tip = 'Vrsta',
+	        Active,
+	        JeZadnjaRazina = CAST(1 AS BIT)
+        FROM Models.DisabilityType
+
+        UNION ALL
+
+        SELECT 
+	        ID,
+	        ParentID = DisabilityTypeID,
+	        Naziv = Subtype,
+	        Tip = 'Podvrsta',
+	        Active,
+	        JeZadnjaRazina = CAST(1 AS BIT)
+        FROM Models.DisabilitySubtype
+    "
+    {
+        Guid ParentID;
+        Bool Active;
+        Bool JeZadnjaRazina;
+        ShortString Tip;
+        ShortString Naziv;
+    }
+
+    Browse DisabilitySubtypeLookup Models.DisabilitySubtype
+    {
+        Take Active;
+        Take Subtype;
+        Take DisabilityTypeActive 'DisabilityType.Active';
+    }
+}

@@ -1,0 +1,48 @@
+
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<p-menubar class="topbar">
+  <ng-template pTemplate="start">
+    <div class="flex" style="width: auto;">
+      <div *ngTemplateOutlet="menuContainer"></div>
+      <h2 style="font-weight:400">{{ title }}</h2>
+    </div>
+  </ng-template>  
+  <ng-template pTemplate="end"><div *ngTemplateOutlet="userMenuContainer"></div></ng-template>
+</p-menubar>
+
+<router-outlet (activate)="onRouterOutletActivate($event)"></router-outlet>
+
+<ng-template #menuContainer>
+  <div class="card flex justify-content-center">
+    <p-menu #menu
+      [model]="menuItems"
+      [popup]="true">
+    </p-menu>
+    <p-button
+      type="button"
+      (click)="menu.toggle($event)"
+      [rounded]="true"
+      icon="pi pi-bars"
+      [text]="true">
+    </p-button>
+  </div>
+</ng-template>
+
+<ng-template #userMenuContainer>
+  <div class="card flex justify-content-center">
+    <p-menu #userMenu
+      [model]="userMenuItems"
+      [popup]="true">
+    </p-menu>
+    <p-button
+      type="button"
+      (click)="userMenu.toggle($event)"
+      icon="pi pi-user"
+      [rounded]="true"
+      [text]="true">
+      <!-- <p-avatar class="flex items-center gap-2" [label]="avatarLabel" shape="circle" styleClass="mr-2"/> -->
+    </p-button>
+</div>
+</ng-template>

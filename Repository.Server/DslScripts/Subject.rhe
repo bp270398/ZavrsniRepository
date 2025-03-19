@@ -1,0 +1,61 @@
+Module Models
+{
+    AutoDetectSqlDependencies;
+
+    Entity Subject
+    {
+        Deactivatable; 
+        Logging { AllProperties; }
+
+        ShortString Title { Unique; Required; }
+
+        ComposableFilterBy CurrentProfessorIsTeachingSubject '(items, repository, parameter) => 
+        {
+            var user = _domRepository.Common.Principal.Query().Where(x => x.Name.Equals(_executionContext.UserInfo.UserName)).ToSimple().FirstOrDefault();
+            var subjectIds = _domRepository.Models.ProfessorSubject.Query().Where(x => x.ProfessorID == user.ID).Select(x => x.SubjectID).ToList();
+
+            return items.Where(x => subjectIds.Contains(x.ID));
+        }';
+
+        ComposableFilterBy StudentIsEnrolledInSubject '(items, repository, parameter) => 
+        {
+            var subjectIds = _domRepository.Models.StudentSubject.Query().Where(x => x.StudentID == parameter.StudentID).Select(x => x.SubjectID).ToList();
+
+            return items.Where(x => subjectIds.Contains(x.ID));
+        }';
+    }
+
+    Parameter CurrentProfessorIsTeachingSubject;
+
+    Parameter StudentIsEnrolledInSubject
+    {
+        Guid StudentID;
+    }
+
+    Browse SubjectBrowse Models.Subject
+    {
+        Take Title;
+        Take Active;
+        Take Professors 'Extension_SubjectExtended.Professors';
+    }
+    
+    SqlQueryable SubjectExtended
+    "
+       SELECT 
+	        ID,
+	        STUFF((
+                SELECT ', ' + pe.FullName
+                FROM Models.ProfessorSubject ps
+                INNER JOIN Models.ProfessorExtended pe ON ps.ProfessorID = pe.ID
+                WHERE ps.SubjectID = s.ID
+                FOR XML PATH(''), TYPE
+            ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS Professors
+        FROM Models.Subject s
+
+    "
+    {
+        Extends Models.Subject;
+
+        ShortString Professors;
+    }
+}

@@ -1,0 +1,134 @@
+﻿Module Models
+{
+    Entity Professor
+    {
+        Logging { AllProperties; }
+        Deactivatable; 
+
+        Extends Common.Principal;
+        History { AllProperties; }
+        ShortString FirstName { Required; }
+        ShortString LastName { Required; }
+    }
+
+    Entity ProfessorSubject
+    {
+        Logging { AllProperties; }
+
+        Reference Professor { Detail; Required; }
+        Reference Subject { Required; }
+        UniqueMultiple 'Professor Subject';
+    }
+
+    Browse ProfessorBrowse Models.Professor 
+    {
+      Take Active;
+      Take FullName 'Extension_ProfessorExtended.FullName';
+      Take Subjects 'Extension_ProfessorExtended.Subjects';
+      Take Roles 'Extension_ProfessorExtended.Roles';
+    }
+
+    SqlQueryable ProfessorExtended
+    "
+         SELECT 
+             p.*,
+             FullName = p.FirstName + ' ' + p.LastName,
+            STUFF((
+		        SELECT ', ' + s.Title
+		        FROM Models.ProfessorSubject ps
+		        INNER JOIN Models.Subject s ON s.ID = ps.SubjectID
+		        WHERE ps.ProfessorID = p.ID AND s.Active = 1
+		        FOR XML PATH(''), TYPE
+	        ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS Subjects,
+	        STUFF((
+		        SELECT ', ' + r.Name
+		        FROM Common.PrincipalHasRole phr
+		        INNER JOIN Common.Role r ON r.ID = phr.RoleID
+		        WHERE phr.PrincipalID = p.ID
+		        FOR XML PATH(''), TYPE
+	        ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS Roles
+         FROM Models.Professor p
+    "
+    {
+        Extends Models.Professor;
+
+        ShortString FullName;
+        LongString Subjects;
+        LongString Roles;
+    }
+
+    ComplexStructure ProfessorComplex Models.Professor 
+    {
+        Detail Models.ProfessorSubject Subjects;
+
+        Object Common.Principal Principal;
+        ListOf Common.PrincipalHasRole PrincipalHasRoles;
+        Date LockoutEnd;
+        Bool IsConfirmed;
+        Bool IsPermanentlyLockedOut;
+        Bool HasAccess;
+
+        CreateGet
+        {
+            AfterGet 'LoadAdditionalData'
+            '
+                root.Principal = _domRepository.Common.Principal.Query().Where(x => x.ID == root.ID).ToSimple().FirstOrDefault();
+
+                root.PrincipalHasRoles = repository.Common.PrincipalHasRole.Query(x => x.PrincipalID == root.ID).ToSimple().ToList();
+
+                 var userInformation = _domRepository.Common.UserInfo.Query().Where(x => x.ID == root.ID).ToSimple().FirstOrDefault();
+
+                 if(userInformation != null)
+                 {
+                    root.LockoutEnd = userInformation.LockoutEnd;
+                    root.IsConfirmed = userInformation.IsConfirmed;
+                    root.IsPermanentlyLockedOut = userInformation.IsPermanentlyLockedOut;
+                    root.HasAccess = userInformation.HasAccess;
+                 }
+            ';
+        }
+
+        CreateSave
+        {
+            BeforeSave 'SaveAdditionalData'
+            '
+                if(isNew)
+                {
+                    if(root.Principal == null)
+                    {
+                        root.Principal = new Common.Principal{ ID = root.ID };
+                    
+                        var baseName = root.FirstName + root.LastName;
+                        var name = baseName;
+                        var i = 1;
+
+                        while (_domRepository.Common.Principal.Query().Where(x => x.Name == name).Any())
+                        {
+                            name = baseName + i;
+                            i++;
+                        }
+                        root.Principal.Name = name;
+                    }
+
+                }
+                _domRepository.Common.UpsertPrincipal.Execute(new Common.UpsertPrincipal{ Principal = root.Principal, PrincipalHasRoles = root.PrincipalHasRoles });
+            ';
+
+            AfterSave 'SaveAdditionalData'
+            '
+                var userInformation = _domRepository.Common.UserInfo.Query().Where(x => x.ID == root.ID).ToSimple().FirstOrDefault();
+
+                 if(userInformation != null)
+                 {
+                    if(root.HasAccess.HasValue && root.HasAccess.Value != userInformation.HasAccess)
+                    {
+                        if(root.HasAccess.Value)
+                            _domRepository.Common.UnlockUser.Execute(new Common.UnlockUser{PrincipalID = root.ID});
+                        else
+                            _domRepository.Common.LockUser.Execute(new Common.LockUser{PrincipalID = root.ID});
+                    }
+                 }
+            ';
+        }
+    }
+}

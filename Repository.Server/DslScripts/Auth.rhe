@@ -1,0 +1,138 @@
+﻿
+Module Common
+{   
+    AutoDetectSqlDependencies;
+
+    Entity Role
+    {
+        Bool IsCustomRole { DefaultValue 'item => false'; }
+    }
+
+	SqlQueryable UserInfo 
+	"
+    SELECT
+        p.ID,
+        p.Name AS PrincipalName,
+        p.AspNetUserId AS AspNetUserID,
+        prof.FirstName AS FirstName,
+        prof.LastName AS LastName,
+        m.IsConfirmed AS AccountConfirmed,
+        STUFF((
+            SELECT ', ' + r.Name
+            FROM Common.PrincipalHasRole phr
+            INNER JOIN Common.Role r ON r.ID = phr.RoleID
+            WHERE phr.PrincipalID = p.ID
+            FOR XML PATH(''), TYPE
+        ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS Roles,
+        m.LockoutEnd AS LockoutEnd,
+        m.IsConfirmed AS IsConfirmed,
+        CAST (CASE WHEN (m.LockOutEnd = Common.MaxDateTime()) THEN 1 ELSE 0 END AS BIT) AS IsPermanentlyLockedOut,
+        CAST (CASE WHEN (m.LockOutEnd IS NULL OR m.LockOutEnd != Common.MaxDateTime()) AND m.IsConfirmed = 1 THEN 1 ELSE 0 END AS BIT) AS HasAccess
+    FROM
+        Common.Principal p
+        LEFT JOIN Models.Professor prof ON prof.ID = p.ID
+        LEFT JOIN webpages_Membership m ON m.Userid = p.AspNetUserId
+	"
+	{
+		Extends Common.Principal;
+
+		ShortString PrincipalName;
+		ShortString FirstName;
+		ShortString LastName;
+		LongString Roles;
+        Integer AspNetUserID;
+        Bool AccountConfirmed;
+        Date LockoutEnd;
+        Bool IsConfirmed;
+        Bool IsPermanentlyLockedOut;
+        Bool HasAccess;
+
+        SqlDependsOnFunction Common.MaxDateTime;
+        SqlDependsOnSqlObject Common.webpages_Membership;
+        SqlDependsOn Common.Principal;
+        SqlDependsOn Models.Professor;
+	}
+
+    SqlQueryable PrincipalBrowse 
+	"
+    SELECT
+        p.ID,
+        FirstName = prof.FirstName,
+        LastName = prof.LastName,
+        Email = p.Email,
+        PrincipalName = p.Name,
+        STUFF((
+            SELECT ', ' + r.Name
+            FROM Common.PrincipalHasRole phr
+            INNER JOIN Common.Role r ON r.ID = phr.RoleID
+            WHERE phr.PrincipalID = p.ID
+            FOR XML PATH(''), TYPE
+        ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS Roles,
+        AccountConfirmed = web.IsConfirmed,
+        web.CreateDate,
+        AspNetUserID = p.AspNetUserId
+    FROM Common.Principal p 
+    LEFT JOIN Models.Professor prof ON p.ID = prof.ID
+    LEFT JOIN dbo.webpages_Membership web ON p.AspNetUserId = web.UserId
+	"
+	{
+		Extends Common.Principal;
+
+		ShortString FirstName;
+        ShortString LastName;
+		ShortString Email;
+		ShortString PrincipalName;
+		LongString Roles;
+        Bool AccountConfirmed;
+        Date CreateDate;
+        Integer AspNetUserID;
+
+        SqlDependsOnSqlObject Common.webpages_Membership;
+        SqlDependsOnSqlObject Common.webpages_MembershipLockoutEndColumn;
+        SqlDependsOn Models.Professor;
+        SqlDependsOn Common.Principal;
+        SqlDependsOn Common.Claim;
+        SqlDependsOn Common.PrincipalHasRole;
+        SqlDependsOn Common.Role;
+	}
+
+    DataStructure UserContext
+    { 
+        Guid PrincipalID;
+        ShortString PrincipalName;
+        ShortString FirstName;
+        ShortString LastName;
+        ShortString Email;
+        LongString Roles;
+    }
+	
+    Function GetUserContext Common.UserContext '(repository, parameters, userInfo) => GetUserContextFn(repository, parameters, userInfo)';
+
+
+    Action UpsertPrincipal '(repository, parameters, userInfo) => UpsertPrincipal(repository, parameters, userInfo)'
+    {
+        Object Common.Principal Principal;
+        ListOf Common.PrincipalHasRole PrincipalHasRoles;
+    }
+
+    SqlFunction MaxDateTime
+    ""
+    "
+        RETURNS DATETIME
+        AS
+        BEGIN
+            RETURN '9999-12-31 23:59:59.997';
+        END;
+    ";
+
+    Action LockUser '(repository, parameters, userInfo) => LockUser(repository, parameters, userInfo)'
+    {
+        Guid PrincipalID;
+    }
+
+    Action UnlockUser '(repository, parameters, userInfo) => UnlockUser(repository, parameters, userInfo)'
+    {
+        Guid PrincipalID;
+    }
+}
+

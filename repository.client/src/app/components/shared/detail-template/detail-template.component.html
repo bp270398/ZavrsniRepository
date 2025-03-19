@@ -1,0 +1,14 @@
+<div *ngFor="let field of field.fieldGroup; let i = index;">
+  <span class="flex w-100">
+    <formly-field [field]="field"></formly-field>
+    <div class="flex-end mt-1">
+      <p-button 
+      label="" 
+      icon="pi pi-times" 
+      class="w-full" 
+      severity="secondary"
+      styleClass="w-full" 
+      (onClick)="removeItem(i)"/>
+    </div>
+  </span>
+</div>

@@ -1,0 +1,100 @@
+﻿Module Models
+{
+    Entity Student
+    {
+        Deactivatable; 
+        Logging { AllProperties; }
+
+        ShortString FirstName { Required; }
+        ShortString LastName { Required; }
+        Date DateOfBirth;
+        ShortString Oib { Unique; Required; MinLength 11; MaxLength 11; RegExMatch "^[0-9]*$" "OIB se sastoji samo od numeričkih znakova.";}
+        Integer Grade { Required; MinValue 1; MaxValue 8; }
+        ShortString GradeDivision { Required; }
+
+        Reference EducationType { Required; }
+        Reference EducationLocation { Required; }
+    }
+
+    Entity StudentSubject
+    {
+        Logging { AllProperties; }
+
+        Reference Student { Detail; Required;}
+        Reference Subject { Required; }
+        UniqueMultiple 'Student Subject';
+    }
+
+    Entity StudentDisabilitySubtype
+    {
+        Logging { AllProperties; }
+
+        Reference Student { Detail; }
+        Reference DisabilitySubtype { Required; }
+        UniqueMultiple 'Student DisabilitySubtype';
+    }
+
+    Browse StudentBrowse Models.Student
+    {
+        Take FirstName;
+        Take LastName;
+        Take DateOfBirth;
+        Take Grade;
+        Take GradeDivision;
+        Take FullGrade 'Extension_StudentExtended.FullGrade';
+        Take FullName 'Extension_StudentExtended.FullName';
+        Take FullNameAndGrade 'Extension_StudentExtended.FullNameAndGrade';
+        Take DateOfBirthString 'Extension_StudentExtended.DateOfBirthString';
+        Take Oib;
+        Take EducationLocationID 'EducationLocation.ID';
+        Take EducationLocation 'EducationLocation.Location';
+        Take EducationType 'EducationType.Type';
+        Take EducationTypeID 'EducationType.ID';
+        Take Active;
+    }
+
+    SqlQueryable StudentExtended
+    "
+         SELECT 
+             s.ID,
+             CONVERT(VARCHAR(10), s.DateOfBirth, 104) + '.' AS DateOfBirthString,
+             FullGrade = CAST(s.Grade AS VARCHAR) + '.' + s.GradeDivision,
+             FullName = s.FirstName + ' ' + s.LastName,
+             FullNameAndGrade = s.FirstName + ' ' + s.LastName + ', ' + CAST(s.Grade AS VARCHAR) + '.' + s.GradeDivision,
+			STUFF((
+                SELECT ', ' + ds.Subtype
+                FROM Models.StudentDisabilitySubtype sds
+                INNER JOIN Models.DisabilitySubtype ds ON ds.ID = sds.DisabilitySubtypeID
+                WHERE sds.StudentID = s.ID
+                FOR XML PATH(''), TYPE
+            ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS DisabilitySubtypes,
+			STUFF((
+                SELECT ', ' + ds.Subtype
+                FROM Models.StudentDisabilitySubtype sds
+                INNER JOIN Models.DisabilitySubtype ds ON ds.ID = sds.DisabilitySubtypeID
+                WHERE sds.StudentID = s.ID
+                FOR XML PATH(''), TYPE
+            ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS DisabilitySubtypeIDs
+         FROM Models.Student s
+    "
+    {
+        Extends Models.Student;
+
+        ShortString FullName;
+        ShortString FullNameAndGrade;
+        ShortString FullGrade;
+        ShortString DateOfBirthString;
+        LongString DisabilitySubtypes;        
+        LongString DisabilitySubtypeIDs;
+    }
+
+    ComplexStructure StudentComplex Models.Student
+    {
+        Detail Models.StudentSubject Subjects;
+        Detail Models.StudentDisabilitySubtype DisabilitySubtypes;
+
+        CreateGet;
+        CreateSave;
+    }
+
+}

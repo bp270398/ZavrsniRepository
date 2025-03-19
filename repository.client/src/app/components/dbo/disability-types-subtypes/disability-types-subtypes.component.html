@@ -1,0 +1,62 @@
+<div style="text-align:left;" class="p-fluid">
+  <div class="flex-end" style="padding: 0.8em;">
+      <p-button 
+          label="Dodaj vrstu"
+          icon="pi pi-plus"
+          [raised]="true"
+          [text]="true"
+          [disabled]="!hasDisabilityTypeNewPermission"
+          (onClick)="addType()" />
+  </div>
+  <p-tree
+      [filter]="true" 
+      filterMode="strict" 
+      filterPlaceholder="Pretraga"
+      [value]="treeData"
+      [selectionMode]="selectionMode"
+      scrollHeight="76vh"
+      dataKey="ID">
+      <ng-template let-node pTemplate="default" >
+          <div class="flex flex-space-between" [ngClass]="[node.data.Active ? '' : 'deactivated']">
+              <div class="flex-1"> {{ node.label }} </div>
+              <div>
+                  <p-button *ngIf="node.data.Active && ((node.data.Tip === 'Podvrsta' && hasDisabilitySubtypeEditPermission) || (node.data.Tip === 'Vrsta' && hasDisabilityTypeEditPermission))"
+                      pTooltip="Deaktiviraj"
+                      tooltipPosition="left"                    
+                      icon="pi pi-delete-left"
+                      severity="secondary"
+                      [rounded]="true" [text]="true"
+                      (onClick)="deactivate(node)" />
+                  <p-button *ngIf="node.data.Active && ((node.data.Tip === 'Podvrsta' && hasDisabilitySubtypeEditPermission) || (node.data.Tip === 'Vrsta' && hasDisabilityTypeEditPermission))"
+                      pTooltip="Uredi"
+                      tooltipPosition="left"
+                      icon="pi pi-pencil"
+                      severity="primary"
+                      [rounded]="true" [text]="true"
+                      (onClick)="edit(node)" />
+                  <p-button *ngIf="node.data.Active && node.children && ((node.data.Tip === 'Podvrsta' && hasDisabilitySubtypeNewPermission) || (node.data.Tip === 'Vrsta' && hasDisabilityTypeNewPermission))"
+                      pTooltip="Dodaj podvrstu"
+                      tooltipPosition="left"
+                      icon="pi pi-plus"
+                      severity="success"
+                      [rounded]="true" [text]="true"
+                      (onClick)="addSubtype(node)" />
+                  <p-button *ngIf="!node.data.Active && ((node.data.Tip === 'Podvrsta' && hasDisabilitySubtypeEditPermission) || (node.data.Tip === 'Vrsta' && hasDisabilityTypeEditPermission))" 
+                      pTooltip="Aktiviraj"
+                      tooltipPosition="left"
+                      icon="pi pi-history"
+                      severity="success"
+                      [rounded]="true" [text]="true"
+                      (onClick)="reactivate(node)" />
+                  <!-- <p-button *ngIf="!node.data.Active" 
+                      pTooltip="Obriši"
+                      tooltipPosition="left"                        
+                      icon="pi pi-trash"
+                      severity="danger"
+                      [rounded]="true" [text]="true"
+                      (onClick)="delete(node)" /> -->
+              </div>
+          </div>
+      </ng-template>
+  </p-tree>
+</div>

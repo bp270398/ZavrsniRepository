@@ -1,0 +1,36 @@
+Module DocumentProcessing
+{
+    AutoDetectSqlDependencies;
+    
+    DataStructure GetContentControlInfosResponse
+    {
+        ListOf DocumentProcessing.ContentControlInfo Items;
+    }
+
+    Function GetContentControlInfos DocumentProcessing.GetContentControlInfosResponse
+    '
+        (parameters, repository, userInfo) => GetContentControlInfos(parameters, repository, userInfo);
+    '{
+        Guid DocumentID;
+     }
+
+    Function MapContentControlInfo DocumentProcessing.ContentControlInfo
+    '
+        (parameters, repository, userInfo) => MapContentControlInfo(parameters, repository, userInfo);
+    '{
+        Guid DocumentID;
+        ShortString Tag;
+     }
+
+    Action RemapContentControlInfos 
+    '
+        (parameters, repository, userInfo) => RemapContentControlInfos(parameters, repository, userInfo);
+    '{
+        Guid DocumentID;
+     }
+}
+CustomClaim "DocumentProcessing.UploadDocumentTemplate" "Execute";
+CustomClaim "DocumentProcessing.DownloadDocumentTemplateContent" "Execute";
+CustomClaim "DocumentProcessing.UploadDocument" "Execute";
+CustomClaim "DocumentProcessing.DownloadDocumentContent" "Execute";
+CustomClaim "DocumentProcessing.GenerateDocument" "Execute";

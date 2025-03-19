@@ -1,0 +1,121 @@
+
+<span *ngIf="!searchFormConfiguration">
+  <app-table 
+    [configuration]="tableConfiguration"
+    [searchFormConfiguration]="searchFormConfiguration"
+    [createPermission]="createPermission"
+    (singleSelectionChanged)="onRowClick($event)"
+    (tableSelectionChanged)="onTableSelectionChanged($event)"
+    (addNewClicked)="addNew()">
+  </app-table>
+</span>
+<span *ngIf="searchFormConfiguration">
+  <app-table appFilterableRoute
+    [configuration]="tableConfiguration"
+    [searchFormConfiguration]="searchFormConfiguration"
+    [createPermission]="createPermission"
+    (singleSelectionChanged)="onRowClick($event)"
+    (tableSelectionChanged)="onTableSelectionChanged($event)"
+    (addNewClicked)="addNew()">
+  </app-table>
+</span>
+
+
+<p-sidebar  #sidebar 
+  [(visible)]="sidebarVisible"
+  [fullScreen]="sidebarFullscreen"
+  [autoZIndex]="true"
+  position="right"
+  styleClass="p-sidebar-md"
+  (onHide)="onSidebarHide()">
+
+  <ng-template pTemplate="header">
+    <div class="flex w-100">
+      <div class="flex-start"><h3 style="padding: 0 0.4em;">{{ sidebarTitle }}</h3></div>
+      <div class="flex-end" *ngTemplateOutlet="sidebarHeaderActions"> </div>
+    </div>
+  </ng-template>
+  <ng-template pTemplate="content">
+    <div *ngTemplateOutlet="formlyFormContainer"></div>
+  </ng-template>
+  <ng-template pTemplate="footer" >
+    <div style="display: flex;">
+      <span  class="flex-start">    
+        <span *ngIf="entityActions && dataService && dataService.currentItem && dataService.formState !== formStateNew">
+          <span *ngFor="let action of entityActions">
+            <p-button [icon]="action.icon"
+              [label]="action.label"
+              [text]="true"
+              [severity]="action.type ?? 'primary'"
+              [disabled]="action.disabled && action.disabled(dataService.currentItem)"
+              (onClick)="action.action($event, dataService.currentItem)"/>
+          </span>
+        </span>
+        <div *ngIf="extraEntityActions && extraEntityActions.length !== 0 && dataService && dataService.currentItem && dataService.formState !== formStateNew" class="card flex justify-center">
+          <p-menu #extraActionsMenu  [popup]="true" [baseZIndex]="10000" appendTo="body">
+            <span *ngFor="let item of extraEntityActions">
+              <p-button 
+                [icon]="item.icon"
+                [label]="item.label"
+                [text]="true"
+                [severity]="item.type ?? 'secondary'"
+                [disabled]="item.disabled && item.disabled(dataService.currentItem)"
+                (onClick)="item.action($event, dataService.currentItem)"/>
+            </span>
+          </p-menu>
+          <p-button 
+            [text]="true" 
+            (onClick)="op.toggle($event)" 
+            icon="pi pi-ellipsis-v"/>
+            <p-overlayPanel #op>
+              <div class="flex-col">
+                <span class="w-100" *ngFor="let item of extraEntityActions">
+                  <p-button class="w-100 m-0"
+                    [icon]="item.icon"
+                    [label]="item.label"
+                    [text]="true"
+                    [severity]="item.type ?? 'secondary'"
+                    [disabled]="item.disabled && item.disabled(dataService.currentItem)"
+                    (onClick)="item.action($event, dataService.currentItem)"/>
+                </span>
+              </div>
+            </p-overlayPanel>
+        </div>  
+      </span>
+      
+      <div class="flex-end" >
+        <span *ngIf="formlyForm">
+          <p-button label="Spremi"
+          [outlined]="true"
+          severity="primary"
+          [disabled]="(formlyForm && !formlyForm!.form.dirty) || (dataService && formStateReadonly === dataService!.formState)"
+          (onClick)="formlyForm?.submit()"/>
+        </span>
+      </div>
+    </div>
+  </ng-template>
+</p-sidebar>
+
+<ng-template #formlyFormContainer> 
+  <span *ngIf="formConfiguration">
+    <app-formly-form #formlyForm
+      [configuration]="formConfiguration"
+      [dataService]="dataService"
+      [options]="options"
+      [submitBtnVisible]='false'>
+    </app-formly-form>
+  </span>
+</ng-template>
+
+
+<ng-template #sidebarHeaderActions> 
+  <span *ngIf="deleteAction && dataService && dataService.currentItem && dataService.formState !== formStateNew">
+    <p-button 
+      icon="pi pi-trash"
+      [text]="true"
+      [severity]="'danger'"
+      [disabled]="!hasDeletePermission || (deleteDisabled && deleteDisabled( dataService.currentItem))"
+      (onClick)="deleteAction($event, dataService.currentItem)"/>
+  </span>
+</ng-template>
+

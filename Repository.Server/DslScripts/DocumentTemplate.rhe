@@ -1,0 +1,115 @@
+Module DocumentProcessing
+{
+    AutoDetectSqlDependencies;
+
+    
+    Entity DocumentTemplate 
+    {
+        Deactivatable; 
+        Logging { AllProperties; }
+
+        ShortString DocumentType { Required; Unique; }
+        DateTime CreatedDate { DenyUserEdit; CreationTime; }
+        Reference CreatedBy Models.Professor { DenyUserEdit; Required; }  
+
+        SaveMethod
+        {
+            Initialization InitCreatedBy
+            '
+                 var user = _domRepository.Common.Principal.Query().Where(x => x.Name.Equals(_executionContext.UserInfo.UserName)).ToSimple().FirstOrDefault();
+
+                foreach (var item in insertedNew)
+                {
+                    item.CreatedByID = user.ID;
+                }
+            ';
+         }
+    }
+
+    Entity DocumentTemplateContent
+    {
+        Logging { AllProperties; }
+
+        Binary Content;
+        ShortString FileExtension { Required; }
+        DateTime CreatedDate { DenyUserEdit; CreationTime; }
+        Reference CreatedBy Models.Professor { DenyUserEdit; Required; }  
+        Reference DocumentTemplate DocumentProcessing.DocumentTemplate { Required; Detail; }  
+
+        SaveMethod
+        {
+            Initialization InitCreatedBy
+            '
+                 var user = _domRepository.Common.Principal.Query().Where(x => x.Name.Equals(_executionContext.UserInfo.UserName)).ToSimple().FirstOrDefault();
+
+                foreach (var item in insertedNew)
+                {
+                    item.CreatedByID = user.ID;
+                }
+            ';
+         }
+    }
+
+    SqlQueryable DocumentTemplateContentExtended
+    "
+         SELECT 
+             ID,
+	        CONVERT(VARCHAR(10), CreatedDate, 104) + '.' AS CreatedDateString
+         FROM DocumentProcessing.DocumentTemplateContent 
+    "
+    {
+        Extends DocumentProcessing.DocumentTemplateContent;
+
+        ShortString CreatedDateString;
+    }
+
+    Browse DocumentTemplateContentBrowse DocumentProcessing.DocumentTemplateContent
+    {
+        Take DocumentTemplate;
+        Take FileExtension;
+        Take CreatedBy;
+        Take CreatedDate;
+        Take CreatedByFullName 'CreatedBy.Extension_ProfessorExtended.FullName';
+        Take CreatedDateString 'Extension_DocumentTemplateContentExtended.CreatedDateString';
+
+    }
+
+    SqlQueryable DocumentTemplateExtended <sql\DocumentTemplateExtended.sql>
+    {
+        Extends DocumentProcessing.DocumentTemplate;
+        Reference DocumentTemplateContent DocumentProcessing.DocumentTemplateContent;
+
+        ShortString FileExtension;
+        ShortString CreatedDateString;
+    }
+
+    Browse DocumentTemplateBrowse DocumentProcessing.DocumentTemplate
+    {
+        Take ProfessorFullName 'CreatedBy.Extension_ProfessorExtended.FullName';
+        Take DocumentType;
+        Take CreatedDate;
+        Take CreatedBy;
+        Take CreatedDateString 'Extension_DocumentTemplateExtended.CreatedDateString';
+        Take FileExtension 'Extension_DocumentTemplateExtended.FileExtension';
+        Take Active;
+        Take DocumentTemplateContentID 'Extension_DocumentTemplateExtended.DocumentTemplateContentID';
+
+    }
+
+    ComplexStructure DocumentTemplateComplex DocumentProcessing.DocumentTemplate
+    {        
+        Detail DocumentProcessing.DocumentTemplateContent Contents;
+        Object DocumentProcessing.DocumentTemplateContent CurrentContent;
+
+        CreateGet
+        {
+            AfterGet 'LoadAdditonalData'
+            '
+				root.CurrentContent = root.Contents.OrderByDescending(x => x.CreatedDate).Select(x => x.ConvertTo<DocumentProcessing.DocumentTemplateContent>()).FirstOrDefault();
+            ';
+        }
+        CreateSave;
+    }
+    
+    
+}

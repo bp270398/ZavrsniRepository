@@ -1,0 +1,185 @@
+@import "primeng/resources/themes/lara-light-blue/theme.css";
+@import "primeng/resources/primeng.css";
+@import "primeicons/primeicons.css";
+
+html {
+  height: 100vh;
+  width: 100vw;
+}
+
+body {
+  text-align: left;
+  height: inherit;
+  width: inherit;
+  margin: 0;
+  overflow: hidden;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.mb-1 {
+  margin-bottom: 10rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.topbar {
+  height: 1rem;
+}
+
+.content {
+  height: calc(100vh - 1rem);
+}
+
+.p-datatable-thead {
+  z-index: 0;
+}
+
+.dropdown-column {
+  max-width: 50vw;
+  text-wrap: wrap;
+}
+
+.p-datatable-header {
+  text-align: left;
+  padding: 0.8em;
+  /* height: 6em; */
+}
+
+.p-menubar {
+  height: 3.2em;
+}
+
+.p-paginator {
+  padding: 1vh;
+  height: 6vh;
+}
+
+.table-container .p-datatable-wrapper {
+  height: calc(100vh - 6vh - 3.2em);
+  width: auto;
+}
+
+.deactivated {
+  background-color: rgba(234, 238, 244, 0.488);
+  color: gray;
+}
+
+.p-treenode-label {
+  flex-grow: 1;
+}
+
+div.p-treenode-content {
+  width: inherit;
+}
+
+form {
+  height: fit-content;
+}
+
+.p-tabview-panel {
+  height: max-content;
+}
+
+a.p-tabview-nav-link {
+  padding: 0.8em;
+}
+
+div.p-tabview-panels>.p-element {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.form-button-group {
+  margin: 16px 0;
+  visibility: hidden;
+}
+
+.p-element>div.p-tabview-panel,
+.p-tabview-panels {
+  width: 100%;
+}
+
+.field {
+  margin: 1.8em 0;
+  width: 100%;
+}
+
+.m-0 {
+  margin: 0;
+}
+
+.mi-1 {
+  margin-inline: 1em;
+}
+
+.mis-1 {
+  margin-inline-start: 1em;
+}
+
+.mie-1 {
+  margin-inline-end: 1em;
+}
+
+.field-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.field-checkbox label {
+  margin-left: 0.4em;
+}
+
+.p-sidebar-header,
+.p-sidebar-footer {
+  padding: 0.6em;
+  background-color: rgba(246, 252, 255, 0.438);
+}
+
+#topbar-menu-btn .p-submenu-icon {
+  display: none;
+}
+
+.flex {
+  /* width: 100%; */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  align-items: stretch;
+}
+
+.m-0 {
+  margin: 0;
+  flex-grow: 1;
+}
+
+.flex-end {
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.flex-start {
+  flex-grow: 1;
+  display: flex;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+.p-chip {
+  margin: 0.4rem;
+}
+
+.p-chip-text {
+  line-height: normal;
+}

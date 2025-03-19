@@ -1,0 +1,22 @@
+Module Models
+{
+    AutoDetectSqlDependencies;
+
+    Entity EducationType
+    {
+        Deactivatable; 
+        Logging { AllProperties; }
+
+
+        ShortString Type { Required; Unique; }
+    }
+
+    Entity EducationLocation
+    {
+        Deactivatable; 
+        Logging { AllProperties; }
+
+        ShortString Location { Required; Unique; }
+    }
+
+}

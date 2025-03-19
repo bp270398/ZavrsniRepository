@@ -1,0 +1,64 @@
+<div class='table-container'>
+  <div class="p-datatable-header" >
+    <div style="display: flex;">
+      <div class="flex-start">
+        <div *ngFor="let filter of appliedSearches">
+          <p-chip [label]="filter.label + ': ' + filter.value"
+            [removable]="searchFormConfiguration !== undefined"
+            (onRemove)="removeFilter(filter)" />
+        </div>
+      </div>      
+      <div class="flex-end" style="flex-grow:1">
+        <span  *ngIf="createActionVisible">
+          <span *ngIf="!createAction">
+            <p-button label="Dodaj"
+              icon="pi pi-plus"
+              [raised]="true"
+              [text]="true"
+              [disabled]="!hasCreatePermission"
+              (onClick)="onAddNew()" />
+          </span>
+          <span *ngIf="createAction">
+            <p-button
+              [label]="createAction.label"
+              [icon]="createAction.icon"
+              [raised]="true"
+              [rounded]="true"
+              [disabled]="!hasCreatePermission"
+              [text]="true"
+              (onClick)="createAction.action(undefined, undefined)" />
+          </span>
+        </span>
+        <span *ngIf="searchFormConfiguration">
+          <p-button 
+            (onClick)="openSearchForm()" 
+            [text]="true" icon="pi pi-filter" 
+            label=""/>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="configuration">
+    <f-table [configuration]="configuration!"
+        [scrollHeight]="scrollHeight"
+        (selectionChanged)="onTableSelectionChanged($event)"
+        (rowClick)='removeRowClickEvent ? "" : onRowClick($event)'>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td [attr.colspan]="configuration.columns.length">Nema postojećih zapisa.</td>
+          </tr>
+        </ng-template>
+    </f-table>
+  </div>
+</div>
+
+<span *ngIf="searchFormConfiguration" style="display:none;">
+  <app-formly-form 
+    [configuration]="searchFormConfiguration"
+    [model]="searchFormModel"
+    [onBeforeSubmit]="onSearchFormSubmit"
+    [skipSubmit]="true"
+    [submitBtnVisible]="false">
+  </app-formly-form>
+</span>

@@ -1,0 +1,258 @@
+Module DocumentProcessing
+{
+    AutoDetectSqlDependencies;
+    
+    Entity Document 
+    {
+        Reference DocumentTemplate DocumentProcessing.DocumentTemplate { Required; }
+        Reference DocumentStatus;
+        DateTime CreatedDate { DenyUserEdit; CreationTime; }
+        Reference CreatedBy Models.Professor { DenyUserEdit; Required; }  
+
+        Reference Subject Models.Subject;
+        Reference Student Models.Student { Detail; }
+
+        SaveMethod
+        {
+            LoadOldItems
+            {
+                Take 'CreatedByID';
+                Take 'SubjectID';
+                Take 'StudentID';
+            }
+
+            Initialization InitCreatedBy
+            '
+                var user = _domRepository.Common.Principal.Query().Where(x => x.Name.Equals(_executionContext.UserInfo.UserName)).ToSimple().FirstOrDefault();
+
+                foreach (var item in insertedNew)
+                {
+                    item.CreatedByID = user.ID;
+                }
+            ';
+
+            AfterSave 'LoadAndInsertContentControls'
+            '{
+                var referencesUpdatedOnDocumentIds = updatedOld
+                    .Zip(updatedNew, (oldItem,newItem)=> new {oldItem,newItem})
+                    .Where(change => 
+                        change.oldItem.CreatedByID != change.newItem.CreatedByID ||
+                        change.oldItem.StudentID != change.newItem.StudentID ||
+                        change.oldItem.SubjectID != change.newItem.SubjectID
+                    )
+                    .Select(change => change.newItem.ID)
+                    .ToList(); 
+
+                foreach(var id in referencesUpdatedOnDocumentIds)
+                {
+                    _domRepository.DocumentProcessing.RemapContentControlInfos
+                        .Execute(new DocumentProcessing.RemapContentControlInfos {DocumentID = id});
+                }
+            }';
+        }
+
+        ComposableFilterBy CurrentUserIsCreatedByUser '(items, repository, parameter) => 
+        {
+            var user = _domRepository.Common.Principal.Query().Where(x => x.Name.Equals(_executionContext.UserInfo.UserName)).ToSimple().FirstOrDefault();
+            return items.Where(x => x.CreatedByID != user.ID);
+        }';
+        Lock CurrentUserIsCreatedByUser 'Niste ovlašteni za izmijene nad dokumentima koje niste kreirali.';
+    }
+
+    Parameter CurrentUserIsCreatedByUser;
+
+    Entity DocumentContent
+    {
+        Binary Content;
+        ShortString FileExtension { Required; }
+        DateTime CreatedDate { DenyUserEdit; CreationTime; }
+        Reference CreatedBy Models.Professor { DenyUserEdit; Required; }  
+        Reference Document DocumentProcessing.Document { Required; Detail; }  
+
+        SaveMethod
+        {
+            Initialization InitCreatedBy
+            '
+                 var user = _domRepository.Common.Principal.Query().Where(x => x.Name.Equals(_executionContext.UserInfo.UserName)).ToSimple().FirstOrDefault();
+
+                foreach (var item in insertedNew)
+                {
+                    item.CreatedByID = user.ID;
+                }
+            ';
+         }
+
+        ComposableFilterBy CurrentUserIsCreatedByUser '(items, repository, parameter) => 
+        {
+            var user = _domRepository.Common.Principal.Query().Where(x => x.Name.Equals(_executionContext.UserInfo.UserName)).ToSimple().FirstOrDefault();
+            return items.Where(x => x.CreatedByID != user.ID);
+        }';
+        Lock CurrentUserIsCreatedByUser 'Niste ovlašteni za izmijene nad dokumentima koje niste kreirali.';
+    }
+
+        SqlQueryable DocumentContentExtended
+    "
+         SELECT 
+             ID,
+	        CONVERT(VARCHAR(10), CreatedDate, 104) + '.' AS CreatedDateString
+         FROM DocumentProcessing.DocumentContent 
+    "
+    {
+        Extends DocumentProcessing.DocumentContent;
+
+        ShortString CreatedDateString;
+    }
+
+    Browse DocumentContentBrowse DocumentProcessing.DocumentContent
+    {
+        Take FileExtension;
+        Take CreatedBy;
+        Take Document;
+        Take CreatedDate;
+        Take CreatedByFullName 'CreatedBy.Extension_ProfessorExtended.FullName';
+        Take CreatedDateString 'Extension_DocumentContentExtended.CreatedDateString';
+
+    }
+
+    Browse DocumentBrowse DocumentProcessing.Document
+    {
+        Take DocumentStatus 'DocumentStatus.Label';
+        Take ProfessorFullName 'CreatedBy.Extension_ProfessorExtended.FullName';
+        Take StudentFullNameAndGrade 'Student.Extension_StudentExtended.FullNameAndGrade';
+        Take SubjectTitle 'Subject.Title';
+        Take DocumentTemplateType 'DocumentTemplate.DocumentType';
+        Take DocumentTemplate;
+        Take Student;
+        Take Subject;
+        Take CreatedBy;
+        Take CreatedDate;
+        Take FileExtension 'Extension_DocumentExtended.FileExtension';
+        Take SkolskaGodina 'Extension_DocumentExtended.SkolskaGodina';
+        Take CreatedDateString 'Extension_DocumentExtended.CreatedDateString';
+        Take DocumentContentID 'Extension_DocumentExtended.DocumentContentID';
+
+        ComposableFilterBy StudentDocumentFilter '(items, repository, parameter) => 
+        {
+            return items.Where(x => x.StudentID == parameter.StudentID);
+        }';
+
+        ComposableFilterBy TemplateUsedDocumentFilter '(items, repository, parameter) => 
+        {
+            return items.Where(x => x.DocumentTemplateID == parameter.DocumentTemplateID);
+        }';
+    }
+
+    Parameter StudentDocumentFilter
+    {
+        Guid StudentID;
+    }
+
+    Parameter TemplateUsedDocumentFilter
+    {
+        Guid DocumentTemplateID;
+    }
+
+    SqlQueryable DocumentExtended <sql\DocumentExtended.sql>
+    {
+        Extends DocumentProcessing.Document;
+        Reference DocumentContent DocumentProcessing.DocumentContent;
+
+        ShortString FileExtension;
+        ShortString CreatedDateString;
+        ShortString SkolskaGodina;
+    }
+
+
+    ComplexStructure DocumentComplex DocumentProcessing.Document
+    {        
+        Detail DocumentProcessing.ContentControlInfo ContentControlInfos;
+        Object Models.Subject Subject;
+        Object Models.Professor Professor;
+        Object Models.Student Student;
+        Guid DocumentContentID;
+        ShortString DocumentContentExtension;
+
+        CreateGet
+        {
+            AfterGet 'LoadAdditonalData'
+            '
+                root.Subject = repository.Models.Subject.Query(x => x.ID == root.SubjectID).ToSimple().FirstOrDefault();
+                root.Professor = repository.Models.Professor.Query(x => x.ID == root.CreatedByID).ToSimple().FirstOrDefault();
+                root.Student = repository.Models.Student.Query(x => x.ID == root.StudentID).ToSimple().FirstOrDefault();
+                
+                var content = _executionContext.Repository.DocumentProcessing.DocumentContent.Query(x => x.DocumentID == root.ID).ToSimple().ToList().MaxBy(x => x.CreatedDate);
+                if(content != null){
+                    root.DocumentContentID = content.ID;
+                    root.DocumentContentExtension = content.FileExtension;
+                }
+            ';
+        }
+
+        CreateSave
+        {
+            BeforeSave 'Validate'
+            '               
+                if(
+                    (root.DocumentTemplateID == new Guid("D4F4F707-8A75-487D-B237-D065EE4C1DA6") || // IOOP IP obrazac
+                    root.DocumentTemplateID == new Guid("DB1F9BEB-C667-4BBB-B9AA-0067550A3F48")) // IOOP PP obrazac
+                    && root.SubjectID.HasValue == false
+                )
+                    throw new Rhetos.UserException("Predmet je obavezan podatak za odabranu vrstu predloška.");
+            ';
+
+            AfterSave 'InitContentControlInfos'
+            '
+                if(isNew)
+                {
+                    var contentControlInfos = _domRepository.DocumentProcessing.GetContentControlInfos.Execute(new DocumentProcessing.GetContentControlInfos{ DocumentID = root.ID }).Items;
+                    _executionContext.Repository.DocumentProcessing.ContentControlInfo.Insert(contentControlInfos);
+                }
+            ';
+        }
+    }
+
+    Entity ContentControlInfo 
+    {
+        Reference Document DocumentProcessing.Document { Detail; }
+
+        ShortString Tag { Required; }
+        LongString Title;
+        LongString Description;
+        LongString Value;
+        Bool IsMapped { DefaultValue 'item => false'; }
+        ShortString MappedFromProperty;
+        Bool IsReadonly { DefaultValue 'item => false'; }
+        ShortString FieldGroup;
+        Bool IsLongString { DefaultValue 'item => false'; }
+    }
+
+    Entity DocumentContentControlInfo 
+    {
+        Reference Document { Required; Detail; }
+        Reference ContentControlInfo { Required; }
+    }
+
+    
+    Hardcoded DocumentStatus
+    {
+        ShortString Label;
+
+        Entry Created
+        {
+            Value Label 'Kreiran';    
+        }
+        Entry ReadyToSign
+        {
+            Value Label 'Spreman za potpisivanje';    
+        }
+        Entry Signed
+        {
+            Value Label 'Potpisan';    
+        }
+        Entry Sent        
+        {
+            Value Label 'Poslan';    
+        }
+    }
+    
+}

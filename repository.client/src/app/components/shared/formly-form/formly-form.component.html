@@ -1,0 +1,37 @@
+
+<p-scrollPanel *ngIf="scrollable" [style]="{height:height}">
+  <ng-container *ngTemplateOutlet="formlyFormContent"></ng-container>
+</p-scrollPanel>
+
+<ng-container *ngIf="!scrollable" [style]="{height:height}">
+  <ng-container *ngTemplateOutlet="formlyFormContent"></ng-container>
+</ng-container>
+
+<ng-template #formlyFormContent>
+  <div class="p-fluid">
+    <form #formForm [formGroup]="form" (ngSubmit)="submit()" [style]="{width: width}">
+      <formly-form [model]="model"
+                   [fields]="fields"
+                   [options]="options"
+                   [form]="form">
+      </formly-form>
+    </form>
+    <div class="flex w-100" *ngIf="configuration">
+      <div class="flex-start" >
+        <p-button *ngIf="cancelBtnVisible"
+                  [label]="cancelBtnText"
+                  [outlined]="true"
+                  severity="secondary" />
+      </div>
+      <div class="flex-end">
+        <p-button *ngIf="submitBtnVisible"
+                  [label]="submitBtnText"
+                  [outlined]="true"
+                  severity="primary"
+                  [disabled]="!form.dirty"
+                  (onClick)="submit()"/>
+    </div>
+    
+    </div>
+  </div>
+</ng-template>
